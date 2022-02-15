@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from Ex5 import DFT
+from Ex5 import DFT, DFT_optimized
 
 def get_test_data():
 	return [
@@ -12,4 +12,9 @@ def get_test_data():
 @pytest.mark.parametrize("x, expected", get_test_data())
 def test_DFT(x, expected):
 	result = DFT(x)
+	np.testing.assert_array_almost_equal(result, expected)
+
+@pytest.mark.parametrize("x, expected", get_test_data())
+def test_DFT_optimized(x, expected):
+	result = DFT_optimized(x)
 	np.testing.assert_array_almost_equal(result, expected)

@@ -3,8 +3,8 @@ conway.py
 
 A simple Python/matplotlib implementation of Conway's Game of Life.
 
-Original Author: Mahesh Venkitachalam
-https://github.com/electronut/pp/blob/master/conway/conway.py
+Original Author:    Mahesh Venkitachalam
+GitHub:             https://github.com/electronut/pp/blob/master/conway/conway.py
 """
 
 import sys, argparse
@@ -12,9 +12,23 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.animation as animation
 
+from timeit import default_timer as timer
+from functools import wraps
+
 ON = 255
 OFF = 0
 vals = [ON, OFF]
+
+# Decorator for measuring the time spent on a function.
+def timerFun(fn):
+    @wraps(fn)
+    def measure_time(*args, **kwargs):
+        t1 = timer()
+        result = fn(*args, **kwargs)
+        t2 = timer()
+        print(f"@timerFun: {fn.__name__} took {t2 - t1} seconds")
+        return result
+    return measure_time
 
 def randomGrid(N):
     """returns a grid of NxN random values"""
@@ -69,7 +83,7 @@ def update(frameNum, img, grid, N):
                          grid[(i-1)%N, (j-1)%N] + grid[(i-1)%N, (j+1)%N] + 
                          grid[(i+1)%N, (j-1)%N] + grid[(i+1)%N, (j+1)%N])/255)
             # apply Conway's rules
-            if grid[i, j]  == ON:
+            if grid[i, j] == ON:
                 if (total < 2) or (total > 3):
                     newGrid[i, j] = OFF
             else:
@@ -80,13 +94,34 @@ def update(frameNum, img, grid, N):
     grid[:] = newGrid[:]
     return img,
 
+# @timerFun
+def update_optimized(frameNum, img, grid, N):
+    # A reference is made when creating this method.
+    # Ref: https://www.labri.fr/perso/nrougier/from-python-to-numpy/#the-game-of-life
+
+    # Counting the number of neighbours.
+    neighbourCount = np.zeros(grid.shape)
+    neighbourCount[1:-1, 1:-1] += ( grid[ :-2, :-2] + grid[ :-2, 1:-1] + grid[ :-2, 2: ] + 
+                                    grid[1:-1, :-2] +                    grid[1:-1, 2: ] + 
+                                    grid[2:  , :-2] + grid[2:  , 1:-1] + grid[2:  , 2: ]) / ON
+    
+    # Apply rules.
+    birth = (neighbourCount==3)[1:-1,1:-1] & (grid[1:-1,1:-1]==OFF)
+    survive = ((neighbourCount==2) | (neighbourCount==3))[1:-1,1:-1] & (grid[1:-1,1:-1]==ON)
+    grid[...] = OFF
+    grid[1:-1,1:-1][birth | survive] = ON
+
+    # Update data.
+    img.set_data(grid)
+    return img,
+
 # main() function
 def main():
     # Command line args are in sys.argv[1], sys.argv[2] ..
     # sys.argv[0] is the script name itself and can be ignored
     # parse arguments
     parser = argparse.ArgumentParser(description="Runs Conway's Game of Life simulation.")
-  # add arguments
+    # add arguments
     parser.add_argument('--grid-size', dest='N', required=False)
     parser.add_argument('--mov-file', dest='movfile', required=False)
     parser.add_argument('--interval', dest='interval', required=False)
@@ -120,7 +155,7 @@ def main():
     # set up animation
     fig, ax = plt.subplots()
     img = ax.imshow(grid, interpolation='nearest')
-    ani = animation.FuncAnimation(fig, update, fargs=(img, grid, N, ),
+    ani = animation.FuncAnimation(fig, update_optimized, fargs=(img, grid, N, ),
                                   frames = 10,
                                   interval=updateInterval,
                                   save_count=50)

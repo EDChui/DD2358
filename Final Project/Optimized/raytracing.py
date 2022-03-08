@@ -82,8 +82,8 @@ def test_performance():
     sizes = [10, 25, 50, 75, 100, 125, 150, 250, 375, 500, 750, 875, 1000, 1250, 1375, 1500]
     averages = []
     stds = []
-    mins =[]
-    maxs =[]
+    mins = []
+    maxs = []
 
     # Get the time spent on run with varying size.
     for size in sizes:

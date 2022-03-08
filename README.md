@@ -34,13 +34,13 @@
 
 - [Ex 2 - Gauss-Seidel for Poisson Solver](./Assignment%203/Ex2)
 
-- [Bonus 1 - Optimize Ex 2 in C](./Assignment%203/Ex2/Bonus)
+- [Bonus 1 - Optimize Ex 2 in C (with cffi)](./Assignment%203/Ex2/Bonus)
 
 	- Use `gcc -fPIC -shared -o libgs.so gauss_seidel.c` to compile the C code into `.so` file.
 
 - [Bonus 2 - Cythonize the Game of Life](./Assignment%203/BonusB2)
 
-- [Bonus 3 - Optimize Game of Life in C](./Assignment%203/BonusB3)
+- [Bonus 3 - Optimize Game of Life in C (with cffi)](./Assignment%203/BonusB3)
 
 	- Use `gcc -fPIC -shared -o libupdate.so update.c` to compile the C code into `.so` file.
 
@@ -48,6 +48,6 @@
 
 - [Original Code](./Final%20Project/Original%20Code)
 
-- [Optimized Version](./Final%20Project/Optimized)
+- [Optimized Version (with cffi)](./Final%20Project/Optimized)
 
 	- Use `gcc -fPIC -shared -o libraytracing.so c_raytracing.c` to compile the C code into `.so` file.

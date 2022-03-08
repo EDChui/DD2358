@@ -4,6 +4,12 @@ from timeit import default_timer as timer
 from functools import wraps
 from math import ceil
 from tqdm import tqdm
+from cffi import FFI
+
+# CFFI
+ffi = FFI()
+ffi.cdef("""void run(double* img, int w, int h, double* O, double* L, double* position, double* color, double* color_light, double radius, double ambient, double diffuse, double specular_c, double specular_k);""")
+lib = ffi.dlopen("./libraytracing.so")
 
 # Sphere properties.
 position = np.array([0., 0., 1.])
@@ -13,14 +19,27 @@ diffuse = 1.
 specular_c = 1.
 specular_k = 50
 
+c_position = ffi.cast("double*", position.ctypes.data)
+c_radius = ffi.cast("double", radius)
+c_color = ffi.cast("double*", color.ctypes.data)
+c_diffuse = ffi.cast("double", diffuse)
+c_specular_c = ffi.cast("double", specular_c)
+c_specular_k = ffi.cast("double", specular_k)
+
 # Light position and color.
 L = np.array([5., 5., -10.])
 color_light = np.ones(3)
 ambient = .05
 
+c_L = ffi.cast("double*", L.ctypes.data)
+c_color_light = ffi.cast("double*", color_light.ctypes.data)
+c_ambient = ffi.cast("double", ambient)
+
 # Camera.
 O = np.array([0., 0., -1.])  # Position.
 Q = np.array([0., 0., 0.])   # Pointing to.
+
+c_O = ffi.cast("double*", O.ctypes.data)
 
 def timerFn(fn):
     # Decorator for measuring the time spent on a function.
@@ -38,65 +57,17 @@ def normalize(x):
     x /= np.linalg.norm(x)
     return x
 
-def intersect_sphere(O, D, S, R):
-    # Return the distance from O to the intersection
-    # of the ray (O, D) with the sphere (S, R), or
-    # +inf if there is no intersection.
-    # O and S are 3D points, D (direction) is a
-    # normalized vector, R is a scalar.
-    a = np.dot(D, D)
-    OS = O - S
-    b = 2 * np.dot(D, OS)
-    c = np.dot(OS, OS) - R * R
-    disc = b * b - 4 * a * c
-    if disc > 0:
-        distSqrt = np.sqrt(disc)
-        q = (-b - distSqrt) / 2.0 if b < 0 \
-            else (-b + distSqrt) / 2.0
-        t0 = q / a
-        t1 = c / q
-        t0, t1 = min(t0, t1), max(t0, t1)
-        if t1 >= 0:
-            return t1 if t0 < 0 else t0
-    return np.inf
-
-def trace_ray(O, D):
-    # Find first point of intersection with the scene.
-    t = intersect_sphere(O, D, position, radius)
-    # No intersection?
-    if t == np.inf:
-        return
-    # Find the point of intersection on the object.
-    M = O + D * t
-    N = normalize(M - position)
-    toL = normalize(L - M)
-    toO = normalize(O - M)
-    # Ambient light.
-    col = ambient
-    # Lambert shading (diffuse).
-    col += diffuse * max(np.dot(N, toL), 0) * color
-    # Blinn-Phong shading (specular).
-    col += specular_c * color_light * \
-        max(np.dot(N, normalize(toL + toO)), 0) \
-        ** specular_k
-    return col
-
 def run(w, h):
-    img = np.zeros((h, w, 3))
-    # Loop through all pixels.
-    for i, x in enumerate(np.linspace(-1, 1, w)):
-        for j, y in enumerate(np.linspace(-1, 1, h)):
-            # Position of the pixel.
-            Q[0], Q[1] = x, y
-            # Direction of the ray going through
-            # the optical center.
-            D = normalize(Q - O)
-            # Launch the ray and get the color
-            # of the pixel.
-            col = trace_ray(O, D)
-            if col is None:
-                continue
-            img[h - j - 1, i, :] = np.clip(col, 0, 1)
+    img = np.zeros(h * w * 3, dtype=np.double)
+
+    # Convert to C type objects.
+    c_img = ffi.cast("double*", img.ctypes.data)
+    c_w = ffi.cast("int", w)
+    c_h = ffi.cast("int", h)
+
+    lib.run(c_img, c_w, c_h, c_O, c_L, c_position, c_color, c_color_light, c_radius, c_ambient, c_diffuse, c_specular_c, c_specular_k)
+
+    img = img.reshape((h, w, 3))
     return img
 
 def get_image(w, h):
@@ -136,7 +107,7 @@ def test_performance():
         print()
 
     # Plot the average.
-    plt.plot(sizes, averages, label=f"Original", color="blue")
+    plt.plot(sizes, averages, label=f"Optimized", color="orange")
     plt.title("Ray Tracing")
     plt.xlabel("Input size")
     plt.ylabel("Average time spent (s)")

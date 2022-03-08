@@ -51,3 +51,5 @@
 - [Optimized Version (with cffi)](./Final%20Project/Optimized)
 
 	- Use `gcc -fPIC -shared -o libraytracing.so c_raytracing.c` to compile the C code into `.so` file.
+
+	- Use `python -m test_c_raytracing.py` to run the pytest unit test.

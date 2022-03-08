@@ -1,3 +1,4 @@
+#include "c_raytracing.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
